@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<!-- A Modern CSS Reset -->	
+		<link
+			rel="stylesheet"
+			href="https://unpkg.com/modern-css-reset/dist/reset.min.css"
+		<title>キーボード入力表示</title>
+		<style>
+			/* Box Model */
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+			}
+
+			/* Layout */
+			body {
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				height: 100vh;
+				background-color: #f0f0f0;
+			}
+
+			#output {
+				width: 80%;
+				height: 100px;
+				text-align: center;
+				padding: 1em;
+				font-size: 2em;
+			}
+		</style>
+		<script src="https://unpkg.com/obniz@3.x/obniz.js"></script>
+	</head>
+	<body>
+		<h1>Active key</h1>
+		<div id="output"></div>
+
+		<script>
+			const key2tone = new Map([
+				// キーボード下段
+				["a", 207.652], ///#### G#3
+				["z", 220.0], ///////// A3
+				["s", 233.082], ///#### A#3
+				["x", 246.942], /////// B3
+				["c", 261.626], /////// C4
+				["f", 277.183], ///#### C#4
+				["v", 293.665], /////// D4
+				["g", 311.127], ///#### D#4
+				["b", 329.628], /////// E4
+				["n", 349.228], /////// F4
+				["j", 369.994], ///#### F#4
+				["m", 391.995], /////// G4
+				["k", 415.305], ///#### G#4
+				[",", 440.0], ///////// A4
+				["l", 466.164], ///#### A#4
+				[".", 493.883], /////// B4
+				["/", 523.251], /////// C5
+				[":", 554.365], ///#### C#5
+				// キーボード上段
+				["1", 415.305], ///#### G#4
+				["q", 440.0], ///////// A4
+				["2", 466.164], ///#### A#4
+				["w", 493.883], /////// B4
+				["e", 523.251], /////// C5
+				["4", 554.365], ///#### C#5
+				["r", 587.33], //////// D5
+				["5", 622.254], ///#### D#5
+				["t", 659.255], /////// E5
+				["y", 698.456], /////// F5
+				["7", 739.989], ///#### F#5
+				["u", 783.991], /////// G5
+				["8", 830.609], ///#### G#5
+				["i", 880.0], ///////// A5
+				["9", 932.328], ///#### A#5
+				["o", 987.767], /////// B5
+				["p", 1046.502], ////// C6
+				["-", 1108.731], //#### C#6
+				["@", 1174.659], ////// D6
+				["^", 1244.508], //#### D#6
+				["[", 1318.51], /////// E6
+				["\\", 1396.913], ///// F6
+			]);
+
+			// キーが押されたときの処理
+			const activeKeys = new Set();
+			const output = document.getElementById("output");
+
+			// Obnizの設定
+			const obniz = new Obniz("2600-9184"); // ここにObniz IDを入力
+			let light;
+			let speaker;
+
+			// Obnizに接続したときの処理
+			obniz.onconnect = async () => {
+				light = obniz.wired("Keyestudio_TrafficLight", {
+					gnd: 0,
+					green: 1,
+					yellow: 2,
+					red: 3,
+				});
+				speaker = obniz.wired("Keyestudio_Buzzer", {
+					signal: 9,
+					vcc: 10,
+					gnd: 11,
+				});
+			};
+			
+			/**
+			 * 信号機を点灯
+			 * @param {number} num
+			 */
+			const turnOnLight = (num) => {
+				light.green.off();
+				light.yellow.off();
+				light.red.off();
+				switch (num) {
+					case 1:
+						light.green.on();
+						break;
+					case 2:
+						light.green.on();
+						light.yellow.on();
+						break;
+					case 3:
+						light.green.on();
+						light.yellow.on();
+						light.red.on();
+						break;
+					default:
+						break;
+				}
+			};
+
+			/**
+			 * アクティブなキーを表示
+			 */
+			const showActiveKey = () => {
+				output.textContent = Array.from(activeKeys).join(" ");
+			};
+
+			/**
+			 * キーが押されたときの処理
+			 * @param {KeyboardEvent} event
+			 */
+			const handleKeyDown = (event) => {
+				// キーが押されたときのデフォルトの動作を無効化
+				if (event.altKey || event.ctrlKey || event.shiftKey || event.repeat)
+					return;
+				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
+				const key = !isNaN(event.key) ? parseInt(event.key, 10) : event.key;
+				activeKeys.add(key);
+				// buzzerを鳴らす || getでkey2toneの値を取得
+				if (speaker) speaker.play(key2tone.get(key) || 0);
+
+				showActiveKey();
+			};
+
+			/**
+			 * キーが離されたときの処理
+			 * @param {KeyboardEvent} event
+			 */
+			const handleKeyUp = (event) => {
+				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
+				const key = !isNaN(event.key) ? parseInt(event.key, 10) : event.key;
+				activeKeys.delete(key);
+				if (speaker) speaker.stop();
+
+				showActiveKey();
+			};
+
+			// キーが押されたときの処理を登録
+			document.addEventListener("keydown", handleKeyDown);
+			document.addEventListener("keyup", handleKeyUp);
+		</script>
+	</body>
+</html>
