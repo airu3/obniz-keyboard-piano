@@ -139,7 +139,7 @@
 			/**
 			 * アクティブなキーを表示
 			 */
-			const showActiveKey = () => {
+			const showActiveKeys = () => {
 				output.textContent = Array.from(activeKeys).join(" ");
 			};
 
@@ -157,7 +157,7 @@
 				// buzzerを鳴らす || getでkey2toneの値を取得
 				if (speaker) speaker.play(key2tone.get(key) || 0);
 
-				showActiveKey();
+				showActiveKeys();
 			};
 
 			/**
@@ -170,7 +170,7 @@
 				activeKeys.delete(key);
 				if (speaker) speaker.stop();
 
-				showActiveKey();
+				showActiveKeys();
 			};
 
 			// キーが押されたときの処理を登録
