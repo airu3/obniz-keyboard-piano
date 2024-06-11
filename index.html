@@ -3,10 +3,11 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<!-- A Modern CSS Reset -->	
+		<!-- A Modern CSS Reset -->
 		<link
 			rel="stylesheet"
 			href="https://unpkg.com/modern-css-reset/dist/reset.min.css"
+		/>
 		<title>キーボード入力表示</title>
 		<style>
 			/* Box Model */
@@ -24,21 +25,35 @@
 				align-items: center;
 				height: 100vh;
 				background-color: #f0f0f0;
+				font-family: "Arial", sans-serif;
 			}
 
-			#output {
+			h1,
+			h2 {
+				color: #333;
+			}
+
+			#activeKey,
+			#frequency,
+			#octave {
 				width: 80%;
-				height: 100px;
+				height: 50px;
 				text-align: center;
 				padding: 1em;
-				font-size: 2em;
+				font-size: 1.5em;
+				margin-bottom: 1em;
+				border-radius: 5px;
 			}
 		</style>
 		<script src="https://unpkg.com/obniz@3.x/obniz.js"></script>
 	</head>
 	<body>
 		<h1>Active key</h1>
-		<div id="output"></div>
+		<div id="activeKey"></div>
+		<h2>Frequency (Hz)</h2>
+		<div id="frequency"></div>
+		<h2>Octave</h2>
+		<div id="octave"></div>
 
 		<script>
 			const key2tone = new Map([
@@ -86,9 +101,16 @@
 				["\\", 1396.913], ///// F6
 			]);
 
+			// オクターブを保持する変数
+			let octave = 0;
+			const maxOctave = 2; // オクターブの最大値
+			const minOctave = -3; // オクターブの最小値
+
 			// キーが押されたときの処理
 			const activeKeys = new Set();
-			const output = document.getElementById("output");
+			const activeKey = document.getElementById("activeKey");
+			const frequency = document.getElementById("frequency");
+			const octaveEle = document.getElementById("octave");
 
 			// Obnizの設定
 			const obniz = new Obniz("2600-9184"); // ここにObniz IDを入力
@@ -109,7 +131,7 @@
 					gnd: 11,
 				});
 			};
-			
+
 			/**
 			 * 信号機を点灯
 			 * @param {number} num
@@ -140,7 +162,44 @@
 			 * アクティブなキーを表示
 			 */
 			const showActiveKeys = () => {
-				output.textContent = Array.from(activeKeys).join(" ");
+				activeKey.textContent = Array.from(activeKeys).join(" ");
+				frequency.textContent = Array.from(activeKeys)
+					.map((key) => calculateOctave(key))
+					.join(" ");
+				octaveEle.textContent = octave;
+			};
+
+			/**
+			 * オクターブの計算
+			 * @param {string} key
+			 * @returns {number}
+			 */
+			const calculateOctave = (key) => {
+				return (key2tone.get(key) || 0) * Math.pow(2, octave);
+			};
+
+			/**
+			 * キーに対するアクションを行う
+			 * @param {string} key
+			 */
+			const performKeyAction = (key) => {
+				// 矢印の上が押された場合、オクターブを増やす
+				if (key === "ArrowUp" && octave < maxOctave) {
+					octave++;
+					return;
+				}
+
+				// 矢印の下が押された場合、オクターブを減らす
+				if (key === "ArrowDown" && octave > minOctave) {
+					octave--;
+					return;
+				}
+
+				activeKeys.add(key);
+				// buzzerを鳴らす
+				if (speaker) speaker.play(calculateOctave(key));
+
+				showActiveKeys();
 			};
 
 			/**
@@ -148,16 +207,13 @@
 			 * @param {KeyboardEvent} event
 			 */
 			const handleKeyDown = (event) => {
-				// キーが押されたときのデフォルトの動作を無効化
+				// alt, ctrl, shift, metaキー, リピートの場合は無視
 				if (event.altKey || event.ctrlKey || event.shiftKey || event.repeat)
 					return;
 				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
 				const key = !isNaN(event.key) ? parseInt(event.key, 10) : event.key;
-				activeKeys.add(key);
-				// buzzerを鳴らす || getでkey2toneの値を取得
-				if (speaker) speaker.play(key2tone.get(key) || 0);
 
-				showActiveKeys();
+				performKeyAction(key);
 			};
 
 			/**
