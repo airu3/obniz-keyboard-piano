@@ -107,7 +107,7 @@
 			const minOctave = -3; // オクターブの最小値
 
 			// キーが押されたときの処理
-			const activeKeys = new Set();
+			const activeKeys = new Map();
 			const activeKey = document.getElementById("activeKey");
 			const frequency = document.getElementById("frequency");
 			const octaveEle = document.getElementById("octave");
@@ -116,20 +116,23 @@
 			const obniz = new Obniz("2600-9184"); // ここにObniz IDを入力
 			let light;
 			let speaker;
+			let speakers = [];
 
 			// Obnizに接続したときの処理
 			obniz.onconnect = async () => {
-				light = obniz.wired("Keyestudio_TrafficLight", {
-					gnd: 0,
-					green: 1,
-					yellow: 2,
-					red: 3,
-				});
-				speaker = obniz.wired("Keyestudio_Buzzer", {
+				let speaker1 = obniz.wired("Keyestudio_Buzzer", {
 					signal: 9,
 					vcc: 10,
 					gnd: 11,
 				});
+				speakers.push(speaker1);
+
+				let speaker2 = obniz.wired("Keyestudio_Buzzer", {
+					signal: 0,
+					vcc: 1,
+					gnd: 2,
+				});
+				speakers.push(speaker2);
 			};
 
 			/**
@@ -164,7 +167,7 @@
 			const showActiveKeys = () => {
 				activeKey.textContent = Array.from(activeKeys).join(" ");
 				frequency.textContent = Array.from(activeKeys)
-					.map((key) => calculateOctave(key))
+					.map((key) => (key2tone.get(key) || 0) * Math.pow(2, octave))
 					.join(" ");
 				octaveEle.textContent = octave;
 			};
@@ -182,7 +185,19 @@
 			 * キーに対するアクションを行う
 			 * @param {string} key
 			 */
-			const performKeyAction = (key) => {
+			const performKeyAction = (key) => {};
+
+			/**
+			 * キーが押されたときの処理
+			 * @param {KeyboardEvent} event
+			 */
+			const handleKeyDown = (event) => {
+				// alt, ctrl, shift, metaキー, リピートの場合は無視
+				if (event.altKey || event.ctrlKey || event.shiftKey || event.repeat)
+					return;
+				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
+				const key = event.key;
+
 				// 矢印の上が押された場合、オクターブを増やす
 				if (key === "ArrowUp" && octave < maxOctave) {
 					octave++;
@@ -195,25 +210,12 @@
 					return;
 				}
 
-				activeKeys.add(key);
+				activeKeys.set(key, speakers[activeKeys.size % speakers.length]); // Mapにスピーカーを追加
 				// buzzerを鳴らす
-				if (speaker) speaker.play(calculateOctave(key));
-
+				activeKeys
+					.get(key)
+					.play((key2tone.get(key) || 0) * Math.pow(2, octave)); // 対応するスピーカーを鳴らす
 				showActiveKeys();
-			};
-
-			/**
-			 * キーが押されたときの処理
-			 * @param {KeyboardEvent} event
-			 */
-			const handleKeyDown = (event) => {
-				// alt, ctrl, shift, metaキー, リピートの場合は無視
-				if (event.altKey || event.ctrlKey || event.shiftKey || event.repeat)
-					return;
-				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
-				const key = !isNaN(event.key) ? parseInt(event.key, 10) : event.key;
-
-				performKeyAction(key);
 			};
 
 			/**
@@ -222,9 +224,9 @@
 			 */
 			const handleKeyUp = (event) => {
 				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
-				const key = !isNaN(event.key) ? parseInt(event.key, 10) : event.key;
+				const key = event.key;
+				activeKeys.get(key).stop(); // 対応するスピーカーを停止
 				activeKeys.delete(key);
-				if (speaker) speaker.stop();
 
 				showActiveKeys();
 			};
