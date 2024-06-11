@@ -115,10 +115,10 @@
 
 			const showActiveKeys = () => {
 				const activeKeyList = Array.from(activeKeys.keys());
-				elemActiveKey.textContent = activeKeyList.join("\n");
+				elemActiveKey.textContent = activeKeyList.join(" ");
 				elemFrequency.textContent = activeKeyList
 					.map(calculateFrequency)
-					.join("\n");
+					.join(" ");
 				elemOctave.textContent = octave;
 			};
 
