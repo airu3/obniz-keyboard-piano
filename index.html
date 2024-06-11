@@ -3,21 +3,12 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<!-- A Modern CSS Reset -->
 		<link
 			rel="stylesheet"
 			href="https://unpkg.com/modern-css-reset/dist/reset.min.css"
 		/>
 		<title>キーボード入力表示</title>
 		<style>
-			/* Box Model */
-			*,
-			*::before,
-			*::after {
-				box-sizing: border-box;
-			}
-
-			/* Layout */
 			body {
 				display: flex;
 				flex-direction: column;
@@ -26,23 +17,18 @@
 				height: 100vh;
 				background-color: #f0f0f0;
 				font-family: "Arial", sans-serif;
-			}
-
-			h1,
-			h2 {
-				color: #333;
+				margin: 0;
+				padding: 0;
 			}
 
 			#activeKey,
 			#frequency,
 			#octave {
 				width: 80%;
-				height: 50px;
-				text-align: center;
 				padding: 1em;
 				font-size: 1.5em;
 				margin-bottom: 1em;
-				border-radius: 5px;
+				text-align: center;
 			}
 		</style>
 		<script src="https://unpkg.com/obniz@3.x/obniz.js"></script>
@@ -56,182 +42,130 @@
 		<div id="octave"></div>
 
 		<script>
-			const key2tone = new Map([
-				// キーボード下段
-				["a", 207.652], ///#### G#3
-				["z", 220.0], ///////// A3
-				["s", 233.082], ///#### A#3
-				["x", 246.942], /////// B3
-				["c", 261.626], /////// C4
-				["f", 277.183], ///#### C#4
-				["v", 293.665], /////// D4
-				["g", 311.127], ///#### D#4
-				["b", 329.628], /////// E4
-				["n", 349.228], /////// F4
-				["j", 369.994], ///#### F#4
-				["m", 391.995], /////// G4
-				["k", 415.305], ///#### G#4
-				[",", 440.0], ///////// A4
-				["l", 466.164], ///#### A#4
-				[".", 493.883], /////// B4
-				["/", 523.251], /////// C5
-				[":", 554.365], ///#### C#5
-				// キーボード上段
-				["1", 415.305], ///#### G#4
-				["q", 440.0], ///////// A4
-				["2", 466.164], ///#### A#4
-				["w", 493.883], /////// B4
-				["e", 523.251], /////// C5
-				["4", 554.365], ///#### C#5
-				["r", 587.33], //////// D5
-				["5", 622.254], ///#### D#5
-				["t", 659.255], /////// E5
-				["y", 698.456], /////// F5
-				["7", 739.989], ///#### F#5
-				["u", 783.991], /////// G5
-				["8", 830.609], ///#### G#5
-				["i", 880.0], ///////// A5
-				["9", 932.328], ///#### A#5
-				["o", 987.767], /////// B5
-				["p", 1046.502], ////// C6
-				["-", 1108.731], //#### C#6
-				["@", 1174.659], ////// D6
-				["^", 1244.508], //#### D#6
-				["[", 1318.51], /////// E6
-				["\\", 1396.913], ///// F6
+			const key2freq = new Map([
+				["a", 207.652],
+				["z", 220.0],
+				["s", 233.082],
+				["x", 246.942],
+				["c", 261.626],
+				["f", 277.183],
+				["v", 293.665],
+				["g", 311.127],
+				["b", 329.628],
+				["n", 349.228],
+				["j", 369.994],
+				["m", 391.995],
+				["k", 415.305],
+				[",", 440.0],
+				["l", 466.164],
+				[".", 493.883],
+				["/", 523.251],
+				[":", 554.365],
+				["1", 415.305],
+				["q", 440.0],
+				["2", 466.164],
+				["w", 493.883],
+				["e", 523.251],
+				["4", 554.365],
+				["r", 587.33],
+				["5", 622.254],
+				["t", 659.255],
+				["y", 698.456],
+				["7", 739.989],
+				["u", 783.991],
+				["8", 830.609],
+				["i", 880.0],
+				["9", 932.328],
+				["o", 987.767],
+				["p", 1046.502],
+				["-", 1108.731],
+				["@", 1174.659],
+				["^", 1244.508],
+				["[", 1318.51],
+				["\\", 1396.913],
 			]);
-
-			// オクターブを保持する変数
 			let octave = 0;
-			const maxOctave = 2; // オクターブの最大値
-			const minOctave = -3; // オクターブの最小値
 
-			// キーが押されたときの処理
 			const activeKeys = new Map();
-			const activeKey = document.getElementById("activeKey");
-			const frequency = document.getElementById("frequency");
-			const octaveEle = document.getElementById("octave");
+			const elemActiveKey = document.getElementById("activeKey");
+			const elemFrequency = document.getElementById("frequency");
+			const elemOctave = document.getElementById("octave");
 
-			// Obnizの設定
-			const obniz = new Obniz("2600-9184"); // ここにObniz IDを入力
-			let light;
-			let speaker;
-			let speakers = [];
+			const obniz = new Obniz("2600-9184");
+			const speakers = [];
 
-			// Obnizに接続したときの処理
 			obniz.onconnect = async () => {
-				let speaker1 = obniz.wired("Keyestudio_Buzzer", {
-					signal: 9,
-					vcc: 10,
-					gnd: 11,
-				});
-				speakers.push(speaker1);
-
-				let speaker2 = obniz.wired("Keyestudio_Buzzer", {
-					signal: 0,
-					vcc: 1,
-					gnd: 2,
-				});
-				speakers.push(speaker2);
+				speakers.push(
+					{
+						assign: "",
+						obniz: obniz.wired("Keyestudio_Buzzer", {
+							signal: 0,
+							vcc: 1,
+							gnd: 2,
+						}),
+					},
+					{
+						assign: "",
+						obniz: obniz.wired("Keyestudio_Buzzer", {
+							signal: 9,
+							vcc: 10,
+							gnd: 11,
+						}),
+					}
+				);
 			};
 
-			/**
-			 * 信号機を点灯
-			 * @param {number} num
-			 */
-			const turnOnLight = (num) => {
-				light.green.off();
-				light.yellow.off();
-				light.red.off();
-				switch (num) {
-					case 1:
-						light.green.on();
-						break;
-					case 2:
-						light.green.on();
-						light.yellow.on();
-						break;
-					case 3:
-						light.green.on();
-						light.yellow.on();
-						light.red.on();
-						break;
-					default:
-						break;
-				}
+			const calculateFrequency = (key) => {
+				return key2freq.get(key) * Math.pow(2, octave);
 			};
 
-			/**
-			 * アクティブなキーを表示
-			 */
 			const showActiveKeys = () => {
-				activeKey.textContent = Array.from(activeKeys).join(" ");
-				frequency.textContent = Array.from(activeKeys)
-					.map((key) => (key2tone.get(key) || 0) * Math.pow(2, octave))
-					.join(" ");
-				octaveEle.textContent = octave;
+				const activeKeyList = Array.from(activeKeys.keys());
+				elemActiveKey.textContent = activeKeyList.join("\n");
+				elemFrequency.textContent = activeKeyList
+					.map(calculateFrequency)
+					.join("\n");
+				elemOctave.textContent = octave;
 			};
 
-			/**
-			 * オクターブの計算
-			 * @param {string} key
-			 * @returns {number}
-			 */
-			const calculateOctave = (key) => {
-				return (key2tone.get(key) || 0) * Math.pow(2, octave);
-			};
-
-			/**
-			 * キーに対するアクションを行う
-			 * @param {string} key
-			 */
-			const performKeyAction = (key) => {};
-
-			/**
-			 * キーが押されたときの処理
-			 * @param {KeyboardEvent} event
-			 */
-			const handleKeyDown = (event) => {
-				// alt, ctrl, shift, metaキー, リピートの場合は無視
-				if (event.altKey || event.ctrlKey || event.shiftKey || event.repeat)
-					return;
-				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
-				const key = event.key;
-
-				// 矢印の上が押された場合、オクターブを増やす
-				if (key === "ArrowUp" && octave < maxOctave) {
+			const adjustOctave = (inputKey) => {
+				const minOctave = -3;
+				const maxOctave = 2;
+				if (inputKey === "ArrowUp" && octave < maxOctave) {
 					octave++;
-					return;
-				}
-
-				// 矢印の下が押された場合、オクターブを減らす
-				if (key === "ArrowDown" && octave > minOctave) {
+				} else if (inputKey === "ArrowDown" && octave > minOctave) {
 					octave--;
-					return;
+				}
+			};
+
+			const handleKeyDown = (event) => {
+				if (event.repeat || !key2freq.has(event.key)) return;
+
+				const speaker = speakers.find((spk) => spk.assign === "");
+				const freq = calculateFrequency(event.key);
+				activeKeys.set(event.key, speaker);
+
+				if (speaker) {
+					speaker.assign = event.key;
+					speaker.obniz.play(freq);
 				}
 
-				activeKeys.set(key, speakers[activeKeys.size % speakers.length]); // Mapにスピーカーを追加
-				// buzzerを鳴らす
-				activeKeys
-					.get(key)
-					.play((key2tone.get(key) || 0) * Math.pow(2, octave)); // 対応するスピーカーを鳴らす
 				showActiveKeys();
 			};
 
-			/**
-			 * キーが離されたときの処理
-			 * @param {KeyboardEvent} event
-			 */
 			const handleKeyUp = (event) => {
-				// 入力されたキーボードが数字なら数値に変換 : それ以外はそのまま
-				const key = event.key;
-				activeKeys.get(key).stop(); // 対応するスピーカーを停止
-				activeKeys.delete(key);
+				adjustOctave(event.key);
+				const speaker = activeKeys.get(event.key);
 
+				if (speaker) {
+					speaker.assign = "";
+					speaker.obniz.stop();
+				}
+
+				activeKeys.delete(event.key);
 				showActiveKeys();
 			};
 
-			// キーが押されたときの処理を登録
 			document.addEventListener("keydown", handleKeyDown);
 			document.addEventListener("keyup", handleKeyUp);
 		</script>
