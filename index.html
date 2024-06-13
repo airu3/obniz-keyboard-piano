@@ -35,7 +35,7 @@
 		<div id="octave"></div>
 
 		<script>
-			const key2freq = new Map([
+			const keyFreqMap = new Map([
 				// キーボード下段
 				["a", 207.652], ///#### G#3
 				["z", 220.0], ///////// A3
@@ -111,10 +111,10 @@
 			};
 
 			const calculateFrequency = (key) => {
-				return key2freq.get(key) * Math.pow(2, octave);
+				return keyFreqMap.get(key) * Math.pow(2, octave);
 			};
 
-			const showActiveKeys = () => {
+			const updateTextContent = () => {
 				const activeKeyList = Array.from(activeKeys.keys());
 				elemActiveKey.textContent = activeKeyList.join(" ");
 				elemFrequency.textContent = activeKeyList
@@ -134,7 +134,7 @@
 			};
 
 			const handleKeyDown = (event) => {
-				if (event.repeat || !key2freq.has(event.key)) return;
+				if (event.repeat || !keyFreqMap.has(event.key)) return;
 
 				const speaker = speakers.find((spk) => spk.assign === "");
 				const freq = calculateFrequency(event.key);
@@ -145,7 +145,7 @@
 					speaker.obniz.play(freq);
 				}
 
-				showActiveKeys();
+				updateTextContent();
 			};
 
 			const handleKeyUp = (event) => {
@@ -158,7 +158,7 @@
 				}
 
 				activeKeys.delete(event.key);
-				showActiveKeys();
+				updateTextContent();
 			};
 
 			document.addEventListener("keydown", handleKeyDown);
