@@ -35,6 +35,7 @@
 		<div id="octave"></div>
 
 		<script>
+			// PCキーボードのキーと周波数のマッピング
 			const keyFreqMap = new Map([
 				// キーボード下段
 				["a", 207.652], ///#### G#3
@@ -79,9 +80,12 @@
 				["[", 1318.51], /////// E6
 				["\\", 1396.913], ///// F6
 			]);
+			// オクターブ
 			let octave = 0;
-
+			// アクティブなキーとスピーカーのマッピング
 			const activeKeys = new Map();
+
+			// HTML要素
 			const elemActiveKey = document.getElementById("activeKey");
 			const elemFrequency = document.getElementById("frequency");
 			const elemOctave = document.getElementById("octave");
@@ -89,6 +93,7 @@
 			const obniz = new Obniz("2600-9184");
 			const speakers = [];
 
+			// obnizの接続が確立されたらスピーカーを初期化
 			obniz.onconnect = async () => {
 				speakers.push(
 					{
@@ -110,10 +115,18 @@
 				);
 			};
 
+			/**
+			 * キーに対応する周波数を計算
+			 * @param {string} key キー
+			 * @returns {number} 周波数
+			 */
 			const calculateFrequency = (key) => {
 				return keyFreqMap.get(key) * Math.pow(2, octave);
 			};
 
+			/**
+			 * アクティブなキーと周波数を更新
+			 */
 			const updateTextContent = () => {
 				const activeKeyList = Array.from(activeKeys.keys());
 				elemActiveKey.textContent = activeKeyList.join(" ");
@@ -123,6 +136,10 @@
 				elemOctave.textContent = octave;
 			};
 
+			/**
+			 * オクターブを調整
+			 * @param {string} inputKey 入力キー
+			 */
 			const adjustOctave = (inputKey) => {
 				const minOctave = -3;
 				const maxOctave = 2;
@@ -133,34 +150,50 @@
 				}
 			};
 
+			/**
+			 * キーボードのキーが押されたときの処理
+			 * @param {KeyboardEvent} event キーボードイベント
+			 */
 			const handleKeyDown = (event) => {
+				// リピート || キーがマッピングされていない場合は処理しない
 				if (event.repeat || !keyFreqMap.has(event.key)) return;
 
+				// 割り当て可能なスピーカーを取得
 				const speaker = speakers.find((spk) => spk.assign === "");
+				// キーに対応する周波数を取得
 				const freq = calculateFrequency(event.key);
-				activeKeys.set(event.key, speaker);
 
+				// キーに対応するスピーカーを鳴らす
 				if (speaker) {
 					speaker.assign = event.key;
 					speaker.obniz.play(freq);
 				}
 
+				// キーとスピーカーを紐付け
+				activeKeys.set(event.key, speaker);
 				updateTextContent();
 			};
 
+			/**
+			 * キーボードのキーが離されたときの処理
+			 * @param {KeyboardEvent} event キーボードイベント
+			 */
 			const handleKeyUp = (event) => {
 				adjustOctave(event.key);
 				const speaker = activeKeys.get(event.key);
 
+				// キーに対応するスピーカーを停止
 				if (speaker) {
 					speaker.assign = "";
 					speaker.obniz.stop();
 				}
 
+				// キーとスピーカーの紐付けを解除
 				activeKeys.delete(event.key);
 				updateTextContent();
 			};
 
+			// キーボードイベントのリスナーを登録
 			document.addEventListener("keydown", handleKeyDown);
 			document.addEventListener("keyup", handleKeyUp);
 		</script>
