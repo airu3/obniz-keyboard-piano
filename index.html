@@ -36,7 +36,7 @@
 
 		<script>
 			// PCキーボードのキーと周波数のマッピング
-			const keyFreqMap = new Map([
+			const KEY_FREQ_MAP = new Map([
 				// キーボード下段
 				["a", 207.652], ///#### G#3
 				["z", 220.0], ///////// A3
@@ -82,15 +82,23 @@
 			]);
 			// オクターブ
 			let octave = 0;
+			const MIN_OCTAVE = -3;
+			const MAX_OCTAVE = 2;
+
+			// 音が鳴る最小時間
+			const MIN_NOTE_DURATION = 100;
+
 			// アクティブなキーとスピーカーのマッピング
 			const activeKeys = new Map();
+			// キーが押された時刻を記録するためのマップ
+			const keyPressTimeMap = new Map();
 
 			// HTML要素
 			const elemActiveKey = document.getElementById("activeKey");
 			const elemFrequency = document.getElementById("frequency");
 			const elemOctave = document.getElementById("octave");
 
-			const obniz = new Obniz("YOUR_OBNIZ_ID");
+			const obniz = new Obniz("OBNIZ_ID_HERE");
 			const speakers = [];
 
 			// obnizの接続が確立されたらスピーカーを初期化
@@ -102,6 +110,22 @@
 							signal: 0,
 							vcc: 1,
 							gnd: 2,
+						}),
+					},
+					{
+						assign: "",
+						obniz: obniz.wired("Keyestudio_Buzzer", {
+							signal: 3,
+							vcc: 4,
+							gnd: 5,
+						}),
+					},
+					{
+						assign: "",
+						obniz: obniz.wired("Keyestudio_Buzzer", {
+							signal: 6,
+							vcc: 7,
+							gnd: 8,
 						}),
 					},
 					{
@@ -121,7 +145,19 @@
 			 * @returns {number} 周波数
 			 */
 			const calculateFrequency = (key) => {
-				return keyFreqMap.get(key) * Math.pow(2, octave);
+				return KEY_FREQ_MAP.get(key) * Math.pow(2, octave);
+			};
+
+			/**
+			 * オクターブを調整
+			 * @param {string} inputKey 入力キー
+			 */
+			const adjustOctave = (inputKey) => {
+				if (inputKey === "ArrowUp" && octave < MAX_OCTAVE) {
+					octave++;
+				} else if (inputKey === "ArrowDown" && octave > MIN_OCTAVE) {
+					octave--;
+				}
 			};
 
 			/**
@@ -137,39 +173,27 @@
 			};
 
 			/**
-			 * オクターブを調整
-			 * @param {string} inputKey 入力キー
-			 */
-			const adjustOctave = (inputKey) => {
-				const minOctave = -3;
-				const maxOctave = 2;
-				if (inputKey === "ArrowUp" && octave < maxOctave) {
-					octave++;
-				} else if (inputKey === "ArrowDown" && octave > minOctave) {
-					octave--;
-				}
-			};
-
-			/**
 			 * キーボードのキーが押されたときの処理
 			 * @param {KeyboardEvent} event キーボードイベント
 			 */
 			const handleKeyDown = (event) => {
-				// リピート || キーがマッピングされていない場合は処理しない
-				if (event.repeat || !keyFreqMap.has(event.key)) return;
+				//  リピートイベントの場合は何もしない
+				if (event.repeat) return;
+				//  既にキーが押されているか、キーに対応する周波数がない場合は何もしない
+				if (activeKeys.has(event.key) || !KEY_FREQ_MAP.has(event.key)) return;
 
-				// 割り当て可能なスピーカーを取得
 				const speaker = speakers.find((spk) => spk.assign === "");
-				// キーに対応する周波数を取得
 				const freq = calculateFrequency(event.key);
 
-				// キーに対応するスピーカーを鳴らす
+				// キーに対応するスピーカーが見つかった場合は音を鳴らす
 				if (speaker) {
 					speaker.assign = event.key;
 					speaker.obniz.play(freq);
 				}
 
-				// キーとスピーカーを紐付け
+				// キーが押された時刻を記録
+				keyPressTimeMap.set(event.key, Date.now());
+				// キーとスピーカーのマッピングを更新
 				activeKeys.set(event.key, speaker);
 				updateTextContent();
 			};
@@ -181,16 +205,27 @@
 			const handleKeyUp = (event) => {
 				adjustOctave(event.key);
 				const speaker = activeKeys.get(event.key);
+				const pressTime = keyPressTimeMap.get(event.key);
+				const elapsedTime = Date.now() - pressTime;
 
-				// キーに対応するスピーカーを停止
-				if (speaker) {
-					speaker.assign = "";
-					speaker.obniz.stop();
-				}
-
-				// キーとスピーカーの紐付けを解除
+				// キーとスピーカーのマッピングを削除
 				activeKeys.delete(event.key);
+				keyPressTimeMap.delete(event.key);
 				updateTextContent();
+
+				// キーに対応するスピーカーが見つかった場合は音を止める
+				if (speaker) {
+					// 最小時間より短い場合は最小時間経過後に停止
+					if (elapsedTime < MIN_NOTE_DURATION) {
+						setTimeout(() => {
+							speaker.assign = "";
+							speaker.obniz.stop();
+						}, MIN_NOTE_DURATION);
+					} else {
+						speaker.assign = "";
+						speaker.obniz.stop();
+					}
+				}
 			};
 
 			// キーボードイベントのリスナーを登録
