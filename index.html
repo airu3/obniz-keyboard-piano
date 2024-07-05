@@ -101,42 +101,44 @@
 			const obniz = new Obniz("OBNIZ_ID_HERE");
 			const speakers = [];
 
+			/**
+			 * スピーカーを初期化
+			 * @param {number} sig スピーカーの信号線のピン番号
+			 * @param {number} vcc スピーカーのVCCのピン番号
+			 * @param {number} gnd スピーカーのGNDのピン番号
+			 * @returns {object} スピーカーの初期化情報
+			 * @property {string} assign アサインされたキー
+			 * @property {object} obniz obnizのインスタンス
+			 * @property {object} obniz.pwm obnizのPWMインスタンス
+			 */
+			let initializeSpeaker = (sig, vcc, gnd) => {
+				const pwm = obniz.getFreePwm();
+				pwm.start({ io: sig });
+				// io配列にVCC, GNDの設定をする
+				obniz.getIO(vcc).output(true);
+				obniz.getIO(gnd).output(false);
+
+				// スピーカーの初期化情報を返す
+				return {
+					assign: "",
+					pwm: pwm,
+				};
+			};
+
 			// obnizの接続が確立されたらスピーカーを初期化
 			obniz.onconnect = async () => {
-				speakers.push(
-					{
-						assign: "",
-						obniz: obniz.wired("Keyestudio_Buzzer", {
-							signal: 0,
-							vcc: 1,
-							gnd: 2,
-						}),
-					},
-					{
-						assign: "",
-						obniz: obniz.wired("Keyestudio_Buzzer", {
-							signal: 3,
-							vcc: 4,
-							gnd: 5,
-						}),
-					},
-					{
-						assign: "",
-						obniz: obniz.wired("Keyestudio_Buzzer", {
-							signal: 6,
-							vcc: 7,
-							gnd: 8,
-						}),
-					},
-					{
-						assign: "",
-						obniz: obniz.wired("Keyestudio_Buzzer", {
-							signal: 9,
-							vcc: 10,
-							gnd: 11,
-						}),
-					}
-				);
+				// スピーカーのピンとVCC, GNDの設定
+				const speakerConfigs = [
+					{ sig: 0, vcc: 1, gnd: 2 },
+					{ sig: 3, vcc: 4, gnd: 5 },
+					{ sig: 6, vcc: 7, gnd: 8 },
+					{ sig: 9, vcc: 10, gnd: 11 },
+				];
+
+				// 各スピーカーの初期化
+				speakerConfigs.forEach((cfg) => {
+					speakers.push(initializeSpeaker(cfg.sig, cfg.vcc, cfg.gnd));
+				});
 			};
 
 			/**
@@ -188,8 +190,8 @@
 				// キーに対応するスピーカーが見つかった場合は音を鳴らす
 				if (speaker) {
 					speaker.assign = event.key;
-					speaker.obniz.duty(50);
-					speaker.obniz.freq(frq);
+					speaker.pwm.duty(50);
+					speaker.pwm.freq(frq);
 				}
 
 				// キーが押された時刻を記録
@@ -221,7 +223,7 @@
 						obniz.wait(MIN_NOTE_DURATION);
 					}
 					speaker.assign = "";
-					speaker.obniz.duty(0);
+					speaker.pwm.duty(0);
 				}
 			};
 
