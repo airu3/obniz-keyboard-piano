@@ -103,7 +103,7 @@
 
 			/**
 			 * スピーカーを初期化
-			 * @param {number} sig スピーカーの信号線のピン番号
+			 * @param {number} signal スピーカーの信号線のピン番号
 			 * @param {number} vcc スピーカーのVCCのピン番号
 			 * @param {number} gnd スピーカーのGNDのピン番号
 			 * @returns {object} スピーカーの初期化情報
@@ -111,9 +111,9 @@
 			 * @property {object} obniz obnizのインスタンス
 			 * @property {object} obniz.pwm obnizのPWMインスタンス
 			 */
-			let initializeSpeaker = (sig, vcc, gnd) => {
+			let initializeSpeaker = (signal, vcc, gnd) => {
 				const pwm = obniz.getFreePwm();
-				pwm.start({ io: sig });
+				pwm.start({ io: signal });
 				// io配列にVCC, GNDの設定をする
 				obniz.getIO(vcc).output(true);
 				obniz.getIO(gnd).output(false);
@@ -129,15 +129,15 @@
 			obniz.onconnect = async () => {
 				// スピーカーのピンとVCC, GNDの設定
 				const speakerConfigs = [
-					{ sig: 0, vcc: 1, gnd: 2 },
-					{ sig: 3, vcc: 4, gnd: 5 },
-					{ sig: 6, vcc: 7, gnd: 8 },
-					{ sig: 9, vcc: 10, gnd: 11 },
+					{ signal: 0, vcc: 1, gnd: 2 },
+					{ signal: 3, vcc: 4, gnd: 5 },
+					{ signal: 6, vcc: 7, gnd: 8 },
+					{ signal: 9, vcc: 10, gnd: 11 },
 				];
 
 				// 各スピーカーの初期化
 				speakerConfigs.forEach((cfg) => {
-					speakers.push(initializeSpeaker(cfg.sig, cfg.vcc, cfg.gnd));
+					speakers.push(initializeSpeaker(cfg.signal, cfg.vcc, cfg.gnd));
 				});
 			};
 
