@@ -183,12 +183,13 @@
 				if (activeKeys.has(event.key) || !KEY_FREQ_MAP.has(event.key)) return;
 
 				const speaker = speakers.find((spk) => spk.assign === "");
-				const freq = calculateFrequency(event.key);
+				const frq = calculateFrequency(event.key);
 
 				// キーに対応するスピーカーが見つかった場合は音を鳴らす
 				if (speaker) {
 					speaker.assign = event.key;
-					speaker.obniz.play(freq);
+					speaker.obniz.duty(50);
+					speaker.obniz.freq(frq);
 				}
 
 				// キーが押された時刻を記録
@@ -217,14 +218,10 @@
 				if (speaker) {
 					// 最小時間より短い場合は最小時間経過後に停止
 					if (elapsedTime < MIN_NOTE_DURATION) {
-						setTimeout(() => {
-							speaker.assign = "";
-							speaker.obniz.stop();
-						}, MIN_NOTE_DURATION);
-					} else {
-						speaker.assign = "";
-						speaker.obniz.stop();
+						obniz.wait(MIN_NOTE_DURATION);
 					}
+					speaker.assign = "";
+					speaker.obniz.duty(0);
 				}
 			};
 
