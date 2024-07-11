@@ -108,8 +108,7 @@
 			 * @param {number} gnd スピーカーのGNDのピン番号
 			 * @returns {object} スピーカーの初期化情報
 			 * @property {string} assign アサインされたキー
-			 * @property {object} obniz obnizのインスタンス
-			 * @property {object} obniz.pwm obnizのPWMインスタンス
+			 * @property {object} pwm PWMオブジェクト
 			 */
 			let initializeSpeaker = (signal, vcc, gnd) => {
 				const pwm = obniz.getFreePwm();
